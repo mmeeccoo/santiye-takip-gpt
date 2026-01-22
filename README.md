@@ -1,0 +1,1 @@
+# santiye-takip-gpt
