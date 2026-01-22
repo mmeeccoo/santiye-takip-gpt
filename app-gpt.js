@@ -15,6 +15,8 @@ function login() {
   );
 
   if (user) {
+    localStorage.setItem("loggedUser", username);
+
     window.location.href = "worker-gpt.html";
 
     // ileride burada worker.html'e yönlendireceğiz
