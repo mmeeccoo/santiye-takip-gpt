@@ -1,16 +1,23 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Şantiye Takip GPT</title>
-  <link rel="stylesheet" href="style-gpt.css">
+  <meta charset="UTF-8" />
+  <title>Şantiye Takip – Giriş</title>
+  <link rel="stylesheet" href="style-gpt.css" />
 </head>
-
 <body>
 
-  <h1>Şantiye Takip Sistemi</h1>
-  <p>Bu sayfa çalışıyor.</p>
-<script src="app-gpt.js"></script>
+  <div class="login-container">
+    <h1>Şantiye Takip Sistemi</h1>
 
+    <input type="text" id="username" placeholder="Kullanıcı Adı" />
+    <input type="password" id="pin" placeholder="PIN" />
+
+    <button onclick="login()">Giriş Yap</button>
+
+    <p id="error" class="error"></p>
+  </div>
+
+  <script src="app-gpt.js"></script>
 </body>
 </html>
