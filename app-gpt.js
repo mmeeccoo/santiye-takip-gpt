@@ -15,7 +15,8 @@ function login() {
   );
 
   if (user) {
-    alert("Giriş başarılı! (Sonraki adım: Ana ekran)");
+    window.location.href = "worker-gpt.html";
+
     // ileride burada worker.html'e yönlendireceğiz
   } else {
     error.textContent = "Kullanıcı adı veya PIN hatalı";
