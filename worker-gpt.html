@@ -16,6 +16,16 @@
     <button>Günlük Rapor</button>
     <button>Malzeme Bildirimi</button>
   </div>
+  <script>
+  const user = localStorage.getItem("loggedUser");
+
+  if (!user) {
+    window.location.href = "index.html";
+  }
+
+  document.getElementById("workerName").textContent = user;
+</script>
+
 
 </body>
 </html>
