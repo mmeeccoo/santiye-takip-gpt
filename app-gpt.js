@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'https://blntvxxvtmrehtmcdsm.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsbnR2eHh2dG1yZWh0bWNkc20iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNjg2MTkwOCwiZXhwIjoyMDUyNDM3OTA4fQ.fNDOMx5k9dLhVhMPArcK-A_aXNc90c6';
+const SUPABASE_URL = 'https://dehztodijllyjjlslxvi.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaHp0b2RpamxseWpqbHNseHZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NjY3MzEsImV4cCI6MjA4NDU0MjczMX0.u9f2FWTfzapPgEo9KJMDkx2hofUAOT0Q6vX0bisx7Dk';
 
 // İstemciyi pencereye (window) bağlayarak tanımlıyoruz
 window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
