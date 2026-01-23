@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yönetim Paneli</title>
+  <link rel="stylesheet" href="style-gpt.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: #f2f2f2;
+      padding: 10px;
+      margin: 0;
+      font-size: 14px;
+    }
+    .admin-container {
+      background: #fff;
+      padding: 15px;
+      max-width: 1000px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .admin-container h1 {
+      font-size: 20px;
+      margin: 10px 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+      border-bottom: 2px solid #ddd;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 15px;
+      border-bottom: 3px solid transparent;
+    }
+    .tab.active {
+      border-bottom-color: #2c7be5;
+      color: #2c7be5;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+      padding: 15px 0;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .form-section {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    .form-section h3 {
+      margin: 0 0 15px 0;
+      color: #2c7be5;
+    }
+    .form-group {
+      margin: 12px 0;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
+    .btn-primary {
+      background: #2c7be5;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .btn-primary:hover {
+      background: #1a68d1;
+    }
+    .btn-success {
+      background: #28a745;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .btn-success:hover {
+      background: #218838;
+    }
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    .btn-warning {
+      background: #ffc107;
+      color: #000;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-warning:hover {
+      background: #e0a800;
+    }
+    .list-item {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .list-item-info {
+      flex: 1;
+    }
+    .list-item-info h4 {
+      margin: 0 0 5px 0;
+      color: #2c7be5;
+    }
+    .list-item-info p {
+      margin: 3px 0;
+      font-size: 13px;
+      color: #666;
+    }
+    .list-item-actions {
+      display: flex;
+      gap: 5px;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    .error {
+      color: #dc3545;
+      margin: 10px 0;
+      padding: 10px;
+      background: #f8d7da;
+      border-radius: 4px;
+    }
+    .success {
+      color: #155724;
+      margin: 10px 0;
+      padding: 10px;
+      background: #d4edda;
+      border-radius: 4px;
+    }
+    .gps-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-container">
+    <h1>⚙️ Yönetim Paneli</h1>
+    <a href="worker-gpt.html">⬅ Geri</a>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('workers')">👷 İşçi Yönetimi</button>
+      <button class="tab" onclick="switchTab('sites')">🏗️ Şantiye Yönetimi</button>
+    </div>
+
+    <!-- İŞÇİ YÖNETİMİ -->
+    <div id="workersTab" class="tab-content active">
+      
+      <!-- Yeni İşçi Ekle -->
+      <div class="form-section">
+        <h3>➕ Yeni İşçi Ekle</h3>
+        
+        <div class="form-group">
+          <label>Kullanıcı Adı:</label>
+          <input type="text" id="workerUsername" placeholder="örn: ahmet" />
+        </div>
+
+        <div class="form-group">
+          <label>PIN (4 haneli):</label>
+          <input type="text" id="workerPin" maxlength="4" placeholder="örn: 1234" />
+        </div>
+
+        <div class="form-group">
+          <label>Günlük Ücret (₺):</label>
+          <input type="number" id="workerSalary" placeholder="örn: 500" />
+        </div>
+
+        <button class="btn-success" onclick="addWorker()">✅ İşçi Ekle</button>
+        <p id="workerError" class="error" style="display:none;"></p>
+        <p id="workerSuccess" class="success" style="display:none;"></p>
+      </div>
+
+      <!-- İşçi Listesi -->
+      <div class="form-section">
+        <h3>📋 Kayıtlı İşçiler</h3>
+        <div id="workersList"></div>
+      </div>
+    </div>
+
+    <!-- ŞANTİYE YÖNETİMİ -->
+    <div id="sitesTab" class="tab-content">
+      
+      <!-- Yeni Şantiye Ekle -->
+      <div class="form-section">
+        <h3>➕ Yeni Şantiye Ekle</h3>
+        
+        <div class="form-group">
+          <label>Şantiye Adı:</label>
+          <input type="text" id="siteName" placeholder="örn: Merkez Şantiye" />
+        </div>
+
+        <div class="form-group">
+          <label>Adres:</label>
+          <input type="text" id="siteAddress" placeholder="örn: Mersin Yenişehir" />
+        </div>
+
+        <div class="form-group">
+          <label>📍 Konum:</label>
+          <button class="btn-primary" onclick="getMyLocation()">📍 Konumumu Al</button>
+          <p class="gps-info">veya manuel olarak girin:</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Enlem (Latitude):</label>
+            <input type="text" id="siteLatitude" placeholder="örn: 36.8121" />
+          </div>
+          <div class="form-group">
+            <label>Boylam (Longitude):</label>
+            <input type="text" id="siteLongitude" placeholder="örn: 34.6415" />
+          </div>
+        </div>
+
+        <button class="btn-success" onclick="addSite()">✅ Şantiye Ekle</button>
+        <p id="siteError" class="error" style="display:none;"></p>
+        <p id="siteSuccess" class="success" style="display:none;"></p>
+      </div>
+
+      <!-- Şantiye Listesi -->
+      <div class="form-section">
+        <h3>📋 Kayıtlı Şantiyeler</h3>
+        <div id="sitesList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app-gpt.js"></script>
+  <script>
+    const role = localStorage.getItem("userRole");
+    
+    // Admin kontrolü
+    if (role !== 'admin') {
+      alert("Bu sayfaya erişim yetkiniz yok!");
+      window.location.href = "worker-gpt.html";
+    }
+
+    // Tab değiştirme
+    function switchTab(tab) {
+      // Tab butonları
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // Tab içerikleri
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      if (tab === 'workers') {
+        document.getElementById('workersTab').classList.add('active');
+        loadWorkers();
+      } else {
+        document.getElementById('sitesTab').classList.add('active');
+        loadSites();
+      }
+    }
+
+    // İşçileri yükle
+    async function loadWorkers() {
+      const workersList = document.getElementById('workersList');
+      workersList.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+      try {
+        const { data: workers, error } = await window.supabaseClient
+          .from('users')
+          .select('*')
+          .eq('role', 'worker')
+          .order('username');
+
+        if (error) throw error;
+
+        if (!workers || workers.length === 0) {
+          workersList.innerHTML = '<p style="text-align:center; color:#666;">Henüz işçi eklenmemiş</p>';
+          return;
+        }
+
+        workersList.innerHTML = '';
+        workers.forEach(worker => {
+          const div = document.createElement('div');
+          div.className = 'list-item';
+          div.innerHTML = `
+            <div class="list-item-info">
+              <h4>👷 ${worker.username}</h4>
+              <p>PIN: ${worker.pin}</p>
+              <p>Günlük Ücret: ${worker.gunluk_ucret ? worker.gunluk_ucret.toLocaleString('tr-TR') + ' ₺' : 'Belirtilmemiş'}</p>
+            </div>
+            <div class="list-item-actions">
+              <button class="btn-warning" onclick="editWorker('${worker.id}', '${worker.username}', '${worker.pin}', ${worker.gunluk_ucret})">✏️ Düzenle</button>
+              <button class="btn-danger" onclick="deleteWorker('${worker.id}', '${worker.username}')">🗑️ Sil</button>
+            </div>
+          `;
+          workersList.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error('İşçi yükleme hatası:', err);
+        workersList.innerHTML = '<p class="error">Hata: ' + err.message + '</p>';
+      }
+    }
+
+    // Yeni işçi ekle
+    async function addWorker() {
+      const username = document.getElementById('workerUsername').value.trim();
+      const pin = document.getElementById('workerPin').value.trim();
+      const salary = document.getElementById('workerSalary').value.trim();
+      const errorDisplay = document.getElementById('workerError');
+      const successDisplay = document.getElementById('workerSuccess');
+
+      errorDisplay.style.display = 'none';
+      successDisplay.style.display = 'none';
+
+      try {
+        if (!username || !pin || !salary) {
+          throw new Error('Lütfen tüm alanları doldurun');
+        }
+
+        if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+          throw new Error('PIN 4 haneli sayı olmalıdır');
+        }
+
+        const { error } = await window.supabaseClient
+          .from('users')
+          .insert({
+            username: username,
+            pin: pin,
+            role: 'worker',
+            gunluk_ucret: parseInt(salary)
+          });
+
+        if (error) throw error;
+
+        successDisplay.textContent = '✅ İşçi başarıyla eklendi!';
+        successDisplay.style.display = 'block';
+
+        // Formu temizle
+        document.getElementById('workerUsername').value = '';
+        document.getElementById('workerPin').value = '';
+        document.getElementById('workerSalary').value = '';
+
+        // Listeyi yenile
+        loadWorkers();
+
+      } catch (err) {
+        console.error('İşçi ekleme hatası:', err);
+        errorDisplay.textContent = 'Hata: ' + err.message;
+        errorDisplay.style.display = 'block';
+      }
+    }
+
+    // İşçi düzenle
+    function editWorker(id, username, pin, salary) {
+      const newPin = prompt(`${username} için yeni PIN (4 haneli):`, pin);
+      if (!newPin) return;
+
+      if (newPin.length !== 4 || !/^\d+$/.test(newPin)) {
+        alert('PIN 4 haneli sayı olmalıdır!');
+        return;
+      }
+
+      const newSalary = prompt(`${username} için yeni günlük ücret (₺):`, salary || '');
+      if (!newSalary) return;
+
+      updateWorker(id, username, newPin, parseInt(newSalary));
+    }
+
+    async function updateWorker(id, username, pin, salary) {
+      try {
+        const { error } = await window.supabaseClient
+          .from('users')
+          .update({
+            pin: pin,
+            gunluk_ucret: salary
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert(`✅ ${username} bilgileri güncellendi!`);
+        loadWorkers();
+
+      } catch (err) {
+        console.error('İşçi güncelleme hatası:', err);
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    // İşçi sil
+    async function deleteWorker(id, username) {
+      if (!confirm(`${username} adlı işçiyi silmek istediğinize emin misiniz?`)) {
+        return;
+      }
+
+      try {
+        const { error } = await window.supabaseClient
+          .from('users')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert(`✅ ${username} silindi!`);
+        loadWorkers();
+
+      } catch (err) {
+        console.error('İşçi silme hatası:', err);
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    // Şantiyeleri yükle
+    async function loadSites() {
+      const sitesList = document.getElementById('sitesList');
+      sitesList.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+      try {
+        const { data: sites, error } = await window.supabaseClient
+          .from('sites')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+
+        if (!sites || sites.length === 0) {
+          sitesList.innerHTML = '<p style="text-align:center; color:#666;">Henüz şantiye eklenmemiş</p>';
+          return;
+        }
+
+        sitesList.innerHTML = '';
+        sites.forEach(site => {
+          const div = document.createElement('div');
+          div.className = 'list-item';
+          div.innerHTML = `
+            <div class="list-item-info">
+              <h4>🏗️ ${site.name}</h4>
+              <p>📍 ${site.address}</p>
+              <p>GPS: ${site.latitude}, ${site.longitude}</p>
+            </div>
+            <div class="list-item-actions">
+              <button class="btn-warning" onclick="editSite('${site.id}', '${site.name}', '${site.address}', '${site.latitude}', '${site.longitude}')">✏️ Düzenle</button>
+              <button class="btn-danger" onclick="deleteSite('${site.id}', '${site.name}')">🗑️ Sil</button>
+            </div>
+          `;
+          sitesList.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error('Şantiye yükleme hatası:', err);
+        sitesList.innerHTML = '<p class="error">Hata: ' + err.message + '</p>';
+      }
+    }
+
+    // Konumumu al
+    async function getMyLocation() {
+      const errorDisplay = document.getElementById('siteError');
+      errorDisplay.style.display = 'none';
+
+      try {
+        if (!navigator.geolocation) {
+          throw new Error('GPS desteklenmiyor');
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            document.getElementById('siteLatitude').value = position.coords.latitude.toFixed(7);
+            document.getElementById('siteLongitude').value = position.coords.longitude.toFixed(7);
+            alert('✅ Konum alındı!');
+          },
+          error => {
+            throw new Error('Konum izni verilmedi');
+          }
+        );
+
+      } catch (err) {
+        console.error('Konum alma hatası:', err);
+        errorDisplay.textContent = 'Hata: ' + err.message;
+        errorDisplay.style.display = 'block';
+      }
+    }
+
+    // Yeni şantiye ekle
+    async function addSite() {
+      const name = document.getElementById('siteName').value.trim();
+      const address = document.getElementById('siteAddress').value.trim();
+      const latitude = document.getElementById('siteLatitude').value.trim();
+      const longitude = document.getElementById('siteLongitude').value.trim();
+      const errorDisplay = document.getElementById('siteError');
+      const successDisplay = document.getElementById('siteSuccess');
+
+      errorDisplay.style.display = 'none';
+      successDisplay.style.display = 'none';
+
+      try {
+        if (!name || !address || !latitude || !longitude) {
+          throw new Error('Lütfen tüm alanları doldurun');
+        }
+
+        const { error } = await window.supabaseClient
+          .from('sites')
+          .insert({
+            name: name,
+            address: address,
+            latitude: latitude,
+            longitude: longitude
+          });
+
+        if (error) throw error;
+
+        successDisplay.textContent = '✅ Şantiye başarıyla eklendi!';
+        successDisplay.style.display = 'block';
+
+        // Formu temizle
+        document.getElementById('siteName').value = '';
+        document.getElementById('siteAddress').value = '';
+        document.getElementById('siteLatitude').value = '';
+        document.getElementById('siteLongitude').value = '';
+
+        // Listeyi yenile
+        loadSites();
+
+      } catch (err) {
+        console.error('Şantiye ekleme hatası:', err);
+        errorDisplay.textContent = 'Hata: ' + err.message;
+        errorDisplay.style.display = 'block';
+      }
+    }
+
+    // Şantiye düzenle
+    function editSite(id, name, address, latitude, longitude) {
+      const newName = prompt(`Şantiye adı:`, name);
+      if (!newName) return;
+
+      const newAddress = prompt(`Adres:`, address);
+      if (!newAddress) return;
+
+      const newLatitude = prompt(`Enlem:`, latitude);
+      if (!newLatitude) return;
+
+      const newLongitude = prompt(`Boylam:`, longitude);
+      if (!newLongitude) return;
+
+      updateSite(id, newName, newAddress, newLatitude, newLongitude);
+    }
+
+    async function updateSite(id, name, address, latitude, longitude) {
+      try {
+        const { error } = await window.supabaseClient
+          .from('sites')
+          .update({
+            name: name,
+            address: address,
+            latitude: latitude,
+            longitude: longitude
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert(`✅ ${name} bilgileri güncellendi!`);
+        loadSites();
+
+      } catch (err) {
+        console.error('Şantiye güncelleme hatası:', err);
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    // Şantiye sil
+    async function deleteSite(id, name) {
+      if (!confirm(`${name} şantiyesini silmek istediğinize emin misiniz?`)) {
+        return;
+      }
+
+      try {
+        const { error } = await window.supabaseClient
+          .from('sites')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert(`✅ ${name} silindi!`);
+        loadSites();
+
+      } catch (err) {
+        console.error('Şantiye silme hatası:', err);
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    // Sayfa yüklendiğinde işçileri göster
+    loadWorkers();
+  </script>
+
+</body>
+</html>
