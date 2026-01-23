@@ -2,13 +2,307 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Sayfa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Malzeme Bildirimi</title>
   <link rel="stylesheet" href="style-gpt.css">
+  <style>
+    body {
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .form-group {
+      margin: 15px 0;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .btn-submit {
+      background: #28a745;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn-submit:hover {
+      background: #218838;
+    }
+    .notification-list {
+      margin: 20px 0;
+    }
+    .notification-item {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border-left: 4px solid #2c7be5;
+    }
+    .notification-item h4 {
+      margin: 0 0 10px 0;
+      color: #2c7be5;
+    }
+    .notification-item p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .notification-item .meta {
+      color: #666;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
-  <div class="login-container">
-    <h1>Sayfa</h1>
+
+  <div class="container">
+    <h1>📦 Malzeme Bildirimi</h1>
     <a href="worker-gpt.html">⬅ Geri</a>
+
+    <!-- İŞÇİ FORMU -->
+    <div id="workerForm" style="display:none;">
+      <h3>Yeni Bildirim</h3>
+      
+      <div class="form-group">
+        <label>Şantiye:</label>
+        <select id="siteSelect" required>
+          <option value="">Şantiye seçin...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Malzeme Adı:</label>
+        <input type="text" id="malzeme" placeholder="Örn: Çimento, Demir, Kum..." required />
+      </div>
+
+      <div class="form-group">
+        <label>Miktar:</label>
+        <input type="text" id="miktar" placeholder="Örn: 10 çuval, 2 ton..." required />
+      </div>
+
+      <div class="form-group">
+        <label>Açıklama (İsteğe Bağlı):</label>
+        <textarea id="aciklama" placeholder="Ek bilgi..."></textarea>
+      </div>
+
+      <button class="btn-submit" onclick="submitNotification()">📤 Bildirimi Gönder</button>
+
+      <p id="error" class="error"></p>
+    </div>
+
+    <!-- ADMİN GÖRÜNÜMÜ -->
+    <div id="adminView" style="display:none;">
+      <h3>Tüm Malzeme Bildirimleri</h3>
+      
+      <div style="margin: 15px 0;">
+        <select id="filterSite" style="padding: 8px; margin-right: 10px;">
+          <option value="">Tüm Şantiyeler</option>
+        </select>
+        <button onclick="loadNotifications()" style="padding: 8px 15px; background: #2c7be5; color: white; border: none; border-radius: 4px; cursor: pointer;">Filtrele</button>
+      </div>
+
+      <div id="loading" class="loading">Yükleniyor...</div>
+      
+      <div class="notification-list" id="notificationList"></div>
+    </div>
+
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app-gpt.js"></script>
+  <script>
+    const user = localStorage.getItem("loggedUser");
+    const role = localStorage.getItem("userRole");
+
+    if (!user) {
+      window.location.href = "index.html";
+    }
+
+    // Şantiyeleri yükle
+    async function loadSites() {
+      try {
+        const { data: sites, error } = await window.supabaseClient
+          .from('sites')
+          .select('name')
+          .order('name');
+
+        if (error) throw error;
+
+        const siteSelect = document.getElementById("siteSelect");
+        const filterSite = document.getElementById("filterSite");
+
+        sites.forEach(site => {
+          // İşçi için
+          if (siteSelect) {
+            const option = document.createElement('option');
+            option.value = site.name;
+            option.textContent = site.name;
+            siteSelect.appendChild(option);
+          }
+
+          // Admin için
+          if (filterSite) {
+            const option = document.createElement('option');
+            option.value = site.name;
+            option.textContent = site.name;
+            filterSite.appendChild(option);
+          }
+        });
+
+      } catch (err) {
+        console.error("Şantiye yükleme hatası:", err);
+      }
+    }
+
+    // Bildirim gönder (İşçi)
+    async function submitNotification() {
+      const errorDisplay = document.getElementById("error");
+      const btn = event.target;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = "Gönderiliyor...";
+        errorDisplay.textContent = "";
+
+        const site = document.getElementById("siteSelect").value;
+        const malzeme = document.getElementById("malzeme").value.trim();
+        const miktar = document.getElementById("miktar").value.trim();
+        const aciklama = document.getElementById("aciklama").value.trim();
+
+        if (!site || !malzeme || !miktar) {
+          throw new Error("Lütfen tüm alanları doldurun");
+        }
+
+        const now = new Date();
+        const date = now.toISOString().split('T')[0];
+
+        const { error } = await window.supabaseClient
+          .from('malzeme_bildirimleri')
+          .insert({
+            worker_name: user,
+            site_name: site,
+            malzeme: malzeme,
+            miktar: miktar,
+            aciklama: aciklama || null,
+            date: date
+          });
+
+        if (error) throw error;
+
+        alert("✅ Bildirim başarıyla gönderildi!");
+        
+        // Formu temizle
+        document.getElementById("siteSelect").value = "";
+        document.getElementById("malzeme").value = "";
+        document.getElementById("miktar").value = "";
+        document.getElementById("aciklama").value = "";
+
+      } catch (err) {
+        console.error("Bildirim gönderme hatası:", err);
+        errorDisplay.textContent = "Hata: " + (err.message || "Bilinmeyen hata");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "📤 Bildirimi Gönder";
+      }
+    }
+
+    // Bildirimleri yükle (Admin)
+    async function loadNotifications() {
+      const loading = document.getElementById("loading");
+      const notificationList = document.getElementById("notificationList");
+
+      try {
+        loading.style.display = "block";
+        notificationList.innerHTML = "";
+
+        const filterSite = document.getElementById("filterSite").value;
+
+        let query = window.supabaseClient
+          .from('malzeme_bildirimleri')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (filterSite) {
+          query = query.eq('site_name', filterSite);
+        }
+
+        const { data: notifications, error } = await query;
+
+        if (error) throw error;
+
+        if (!notifications || notifications.length === 0) {
+          notificationList.innerHTML = '<p style="text-align:center; color:#666;">Henüz bildirim bulunmuyor</p>';
+        } else {
+          notifications.forEach(notif => {
+            const div = document.createElement('div');
+            div.className = 'notification-item';
+            div.innerHTML = `
+              <h4>📦 ${notif.malzeme}</h4>
+              <p><strong>Miktar:</strong> ${notif.miktar}</p>
+              ${notif.aciklama ? `<p><strong>Açıklama:</strong> ${notif.aciklama}</p>` : ''}
+              <p><strong>Şantiye:</strong> ${notif.site_name}</p>
+              <div class="meta">
+                👷 ${notif.worker_name} | 📅 ${notif.date} | ⏰ ${new Date(notif.created_at).toLocaleTimeString('tr-TR')}
+              </div>
+            `;
+            notificationList.appendChild(div);
+          });
+        }
+
+        loading.style.display = "none";
+
+      } catch (err) {
+        console.error("Bildirim yükleme hatası:", err);
+        loading.style.display = "none";
+        notificationList.innerHTML = '<p style="color:red;">Hata: ' + (err.message || 'Bilinmeyen hata') + '</p>';
+      }
+    }
+
+    // Sayfa yüklendiğinde
+    async function init() {
+      await loadSites();
+
+      if (role === 'admin') {
+        // Admin görünümü
+        document.getElementById("adminView").style.display = "block";
+        await loadNotifications();
+      } else {
+        // İşçi formu
+        document.getElementById("workerForm").style.display = "block";
+      }
+    }
+
+    init();
+  </script>
+
 </body>
 </html>
