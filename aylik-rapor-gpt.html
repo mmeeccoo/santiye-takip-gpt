@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aylık Rapor - Maaş Hesaplama</title>
+  <link rel="stylesheet" href="style-gpt.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: #f2f2f2;
+      padding: 10px;
+      margin: 0;
+      font-size: 14px;
+    }
+    .admin-container {
+      background: #fff;
+      padding: 15px;
+      max-width: 1000px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .admin-container h1 {
+      font-size: 20px;
+      margin: 10px 0;
+    }
+    .filters {
+      background: #f8f9fa;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .filters select {
+      padding: 8px;
+      margin: 5px 2px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 200px;
+      font-size: 14px;
+    }
+    .filters button {
+      padding: 8px 15px;
+      background: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px 2px;
+      font-size: 14px;
+    }
+    .filters button:hover {
+      background: #1a68d1;
+    }
+    .btn-excel {
+      background: #28a745;
+      margin-left: 10px;
+    }
+    .btn-excel:hover {
+      background: #218838;
+    }
+    .summary {
+      background: #e8f4f8;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 13px;
+    }
+    .summary h3 {
+      margin: 0 0 10px 0;
+      color: #2c7be5;
+      font-size: 16px;
+    }
+    .summary p {
+      margin: 5px 0;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .salary-table {
+      width: 100%;
+      min-width: 500px;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    .salary-table th {
+      background: #2c7be5;
+      color: white;
+      padding: 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .salary-table td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+      white-space: nowrap;
+    }
+    .salary-table tr:hover {
+      background: #f8f9fa;
+    }
+    .salary-table .total-row {
+      background: #e8f4f8;
+      font-weight: bold;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+    .money {
+      color: #28a745;
+      font-weight: bold;
+    }
+    
+    /* Mobil için kartlı görünüm */
+    .salary-card {
+      background: #f8f9fa;
+      border-left: 4px solid #28a745;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      display: none;
+    }
+    .salary-card .card-header {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #2c7be5;
+    }
+    .salary-card .card-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 13px;
+    }
+    .salary-card .card-label {
+      font-weight: bold;
+      color: #666;
+    }
+    .salary-card .card-value {
+      text-align: right;
+    }
+    
+    /* Mobil görünüm */
+    @media (max-width: 768px) {
+      .table-wrapper {
+        display: none;
+      }
+      .salary-card {
+        display: block;
+      }
+      .filters select {
+        width: 100%;
+        max-width: 100%;
+        margin: 3px 0;
+      }
+      .filters button {
+        width: 48%;
+        margin: 3px 1%;
+      }
+      .btn-excel {
+        margin-left: 0;
+        margin-top: 5px;
+      }
+    }
+    
+    /* Masaüstü görünüm */
+    @media (min-width: 769px) {
+      .salary-card {
+        display: none;
+      }
+      .table-wrapper {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-container">
+    <h1>📅 Aylık Rapor - Maaş Hesaplama</h1>
+    <a href="worker-gpt.html">⬅ Geri</a>
+
+    <div class="filters">
+      <strong>🔍 Ay Seçin:</strong><br>
+      <select id="monthSelect">
+        <option value="">Ay seçin...</option>
+      </select>
+      
+      <button onclick="loadSalaryReport()">Hesapla</button>
+      <button class="btn-excel" onclick="exportToExcel()">📥 Excel İndir</button>
+    </div>
+
+    <div class="summary" id="summary" style="display:none;"></div>
+
+    <div id="loading" class="loading" style="display:none;">Hesaplanıyor...</div>
+
+    <!-- Mobil: Kartlı Görünüm -->
+    <div id="salaryCards"></div>
+
+    <!-- Masaüstü: Tablo Görünümü -->
+    <div class="table-wrapper">
+      <table class="salary-table" id="salaryTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>İşçi</th>
+            <th>Çalışılan Gün</th>
+            <th>Günlük Ücret</th>
+            <th>Toplam Maaş</th>
+          </tr>
+        </thead>
+        <tbody id="salaryBody"></tbody>
+      </table>
+    </div>
+
+    <p id="error" class="error"></p>
+  </div>
+
+  <!-- Excel Export için SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app-gpt.js"></script>
+  <script>
+    const role = localStorage.getItem("userRole");
+    
+    // Admin kontrolü
+    if (role !== 'admin') {
+      alert("Bu sayfaya erişim yetkiniz yok!");
+      window.location.href = "worker-gpt.html";
+    }
+
+    let currentData = []; // Excel için veri
+
+    // Ay dropdown'unu doldur (Son 12 ay)
+    function populateMonths() {
+      const monthSelect = document.getElementById("monthSelect");
+      const now = new Date();
+      
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const monthName = date.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+        
+        const option = document.createElement('option');
+        option.value = `${year}-${month}`;
+        option.textContent = monthName;
+        monthSelect.appendChild(option);
+      }
+      
+      // İlk ayı seç (bu ay)
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      monthSelect.value = thisMonth;
+    }
+
+    // Maaş raporunu hesapla
+    async function loadSalaryReport() {
+      const loading = document.getElementById("loading");
+      const table = document.getElementById("salaryTable");
+      const tbody = document.getElementById("salaryBody");
+      const salaryCards = document.getElementById("salaryCards");
+      const summary = document.getElementById("summary");
+      const errorDisplay = document.getElementById("error");
+      const monthSelect = document.getElementById("monthSelect");
+
+      try {
+        const selectedMonth = monthSelect.value;
+        if (!selectedMonth) {
+          alert("Lütfen bir ay seçin!");
+          return;
+        }
+
+        loading.style.display = "block";
+        table.style.display = "none";
+        salaryCards.innerHTML = "";
+        summary.style.display = "none";
+        errorDisplay.textContent = "";
+
+        // Ay başı ve ay sonu tarihleri
+        const [year, month] = selectedMonth.split('-');
+        const startDate = `${year}-${month}-01`;
+        const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Son gün
+
+        // Tüm işçileri getir
+        const { data: workers, error: workersError } = await window.supabaseClient
+          .from('users')
+          .select('username, gunluk_ucret')
+          .eq('role', 'worker')
+          .order('username');
+
+        if (workersError) throw workersError;
+
+        // Her işçi için çalışma günlerini hesapla
+        const salaryData = [];
+        let totalDays = 0;
+        let totalSalary = 0;
+
+        for (const worker of workers) {
+          // Bu işçinin seçili aydaki FARKLI çalışma günlerini say
+          const { data: records, error: recordsError } = await window.supabaseClient
+            .from('records')
+            .select('date')
+            .eq('worker_name', worker.username)
+            .gte('date', startDate)
+            .lte('date', endDate);
+
+          if (recordsError) throw recordsError;
+
+          // Tekil günleri say (aynı gün birden fazla kayıt olabilir)
+          const uniqueDates = [...new Set(records.map(r => r.date))];
+          const workedDays = uniqueDates.length;
+          const dailyWage = worker.gunluk_ucret || 0;
+          const monthlySalary = workedDays * dailyWage;
+
+          salaryData.push({
+            worker: worker.username,
+            days: workedDays,
+            dailyWage: dailyWage,
+            monthlySalary: monthlySalary
+          });
+
+          totalDays += workedDays;
+          totalSalary += monthlySalary;
+        }
+
+        // Veriyi sakla (Excel için)
+        currentData = salaryData;
+
+        // Tablo ve kartları doldur
+        tbody.innerHTML = "";
+        
+        if (salaryData.length === 0 || totalDays === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Bu ayda çalışma kaydı bulunamadı</td></tr>';
+          salaryCards.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">Bu ayda çalışma kaydı bulunamadı</p>';
+        } else {
+          salaryData.forEach(item => {
+            // TABLO SATIRI
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${item.worker}</td>
+              <td>${item.days} gün</td>
+              <td class="money">${item.dailyWage.toLocaleString('tr-TR')} ₺</td>
+              <td class="money">${item.monthlySalary.toLocaleString('tr-TR')} ₺</td>
+            `;
+            tbody.appendChild(tr);
+
+            // MOBİL KART
+            const card = document.createElement('div');
+            card.className = 'salary-card';
+            card.innerHTML = `
+              <div class="card-header">👷 ${item.worker}</div>
+              <div class="card-row">
+                <span class="card-label">📅 Çalışılan Gün:</span>
+                <span class="card-value">${item.days} gün</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">💵 Günlük Ücret:</span>
+                <span class="card-value money">${item.dailyWage.toLocaleString('tr-TR')} ₺</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">💰 Toplam Maaş:</span>
+                <span class="card-value money">${item.monthlySalary.toLocaleString('tr-TR')} ₺</span>
+              </div>
+            `;
+            salaryCards.appendChild(card);
+          });
+
+          // Toplam satırı
+          const totalTr = document.createElement('tr');
+          totalTr.className = 'total-row';
+          totalTr.innerHTML = `
+            <td>TOPLAM</td>
+            <td>${totalDays} gün</td>
+            <td>-</td>
+            <td class="money">${totalSalary.toLocaleString('tr-TR')} ₺</td>
+          `;
+          tbody.appendChild(totalTr);
+
+          // Toplam kartı
+          const totalCard = document.createElement('div');
+          totalCard.className = 'salary-card';
+          totalCard.style.borderLeftColor = '#2c7be5';
+          totalCard.innerHTML = `
+            <div class="card-header">📊 TOPLAM</div>
+            <div class="card-row">
+              <span class="card-label">📅 Toplam Gün:</span>
+              <span class="card-value">${totalDays} gün</span>
+            </div>
+            <div class="card-row">
+              <span class="card-label">💰 Toplam Maaş:</span>
+              <span class="card-value money">${totalSalary.toLocaleString('tr-TR')} ₺</span>
+            </div>
+          `;
+          salaryCards.appendChild(totalCard);
+
+          // Özet bilgileri
+          const monthName = new Date(year, month - 1, 1).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+          summary.innerHTML = `
+            <h3>📈 ${monthName} Özeti</h3>
+            <p><strong>Toplam İşçi Sayısı:</strong> ${salaryData.length}</p>
+            <p><strong>Toplam Çalışılan Gün:</strong> ${totalDays} gün</p>
+            <p><strong>Toplam Maaş Ödemesi:</strong> <span class="money">${totalSalary.toLocaleString('tr-TR')} ₺</span></p>
+          `;
+          summary.style.display = "block";
+        }
+
+        loading.style.display = "none";
+        table.style.display = "table";
+
+      } catch (err) {
+        console.error("Maaş hesaplama hatası:", err);
+        loading.style.display = "none";
+        errorDisplay.textContent = "Hata: " + (err.message || "Bilinmeyen hata");
+      }
+    }
+
+    // Excel'e aktar
+    function exportToExcel() {
+      if (currentData.length === 0) {
+        alert("Önce raporu hesaplayın!");
+        return;
+      }
+
+      const monthSelect = document.getElementById("monthSelect");
+      const [year, month] = monthSelect.value.split('-');
+      const monthName = new Date(year, month - 1, 1).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+
+      // Excel verisi hazırla
+      const excelData = currentData.map(item => ({
+        'İşçi': item.worker,
+        'Çalışılan Gün': item.days,
+        'Günlük Ücret (₺)': item.dailyWage,
+        'Toplam Maaş (₺)': item.monthlySalary
+      }));
+
+      // Toplam satırı ekle
+      const totalDays = currentData.reduce((sum, item) => sum + item.days, 0);
+      const totalSalary = currentData.reduce((sum, item) => sum + item.monthlySalary, 0);
+      
+      excelData.push({
+        'İşçi': 'TOPLAM',
+        'Çalışılan Gün': totalDays,
+        'Günlük Ücret (₺)': '-',
+        'Toplam Maaş (₺)': totalSalary
+      });
+
+      // Excel dosyası oluştur
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Maaş Raporu");
+
+      // İndir
+      XLSX.writeFile(wb, `Aylik_Maas_Raporu_${monthName}.xlsx`);
+    }
+
+    // Sayfa yüklendiğinde
+    populateMonths();
+  </script>
+
+</body>
+</html>
