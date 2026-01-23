@@ -48,6 +48,13 @@
       padding: 20px;
       color: #666;
     }
+    .history {
+      background: #f8f9fa;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -62,6 +69,9 @@
 
     <div id="content" style="display:none;">
       <div class="site-info" id="siteInfo"></div>
+      
+      <div id="todayHistory" class="history"></div>
+      
       <div class="status" id="status"></div>
       <button id="actionBtn" onclick="handleAction()"></button>
     </div>
@@ -78,7 +88,8 @@
     }
 
     let currentSite = null;
-    let hasEntry = false;
+    let hasActiveEntry = false;
+    let activeRecord = null;
     let userLocation = null;
 
     // GPS ile konum al
@@ -99,7 +110,7 @@
 
     // İki nokta arası mesafe (km)
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Dünya yarıçapı (km)
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -138,8 +149,8 @@
       return nearest;
     }
 
-    // Bugünkü giriş kaydını kontrol et
-    async function checkTodayEntry(siteName) {
+    // Bugünkü tüm kayıtları getir
+    async function getTodayRecords(siteName) {
       const today = new Date().toISOString().split('T')[0];
       
       const { data, error } = await window.supabaseClient
@@ -148,10 +159,30 @@
         .eq('worker_name', user)
         .eq('site_name', siteName)
         .eq('date', today)
-        .maybeSingle();
+        .order('entry_time', { ascending: true });
 
       if (error) throw error;
-      return data;
+      return data || [];
+    }
+
+    // Aktif (çıkış yapılmamış) kayıt var mı?
+    function findActiveRecord(records) {
+      return records.find(r => r.entry_time && !r.exit_time);
+    }
+
+    // Süre hesapla (saat:dakika formatında)
+    function calculateDuration(entryTime, exitTime) {
+      const [eH, eM, eS] = entryTime.split(':').map(Number);
+      const [xH, xM, xS] = exitTime.split(':').map(Number);
+      
+      const entryMinutes = eH * 60 + eM;
+      const exitMinutes = xH * 60 + xM;
+      const diffMinutes = exitMinutes - entryMinutes;
+      
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      
+      return `${hours} saat ${minutes} dakika`;
     }
 
     // Giriş/Çıkış işlemi
@@ -168,8 +199,8 @@
         const time = now.toTimeString().split(' ')[0]; // HH:MM:SS
         const date = now.toISOString().split('T')[0];
 
-        if (!hasEntry) {
-          // GİRİŞ KAYDI
+        if (!hasActiveEntry) {
+          // YENİ GİRİŞ KAYDI
           const { error } = await window.supabaseClient
             .from('records')
             .insert({
@@ -187,25 +218,29 @@
           
         } else {
           // ÇIKIŞ KAYDI
-          const todayRecord = await checkTodayEntry(currentSite.name);
+          const duration = calculateDuration(activeRecord.entry_time, time);
           
           const { error } = await window.supabaseClient
             .from('records')
-            .update({ exit_time: time })
-            .eq('id', todayRecord.id);
+            .update({ 
+              exit_time: time,
+              duration: duration
+            })
+            .eq('id', activeRecord.id);
 
           if (error) throw error;
-          alert("✅ Çıkış kaydedildi!");
+          alert("✅ Çıkış kaydedildi! Çalışma süresi: " + duration);
         }
 
         // Sayfayı yenile
         window.location.reload();
 
       } catch (err) {
-        console.error(err);
-        errorDisplay.textContent = "Hata: " + err.message;
+        console.error("Detaylı hata:", err);
+        console.error("Hata detayları:", JSON.stringify(err, null, 2));
+        errorDisplay.textContent = "Hata: " + (err.message || JSON.stringify(err));
         btn.disabled = false;
-        btn.textContent = hasEntry ? "Çıkış Yap 🚪" : "Giriş Yap 🚪";
+        btn.textContent = hasActiveEntry ? "Çıkış Yap 🚪" : "Giriş Yap 🚪";
       }
     }
 
@@ -215,6 +250,7 @@
       const content = document.getElementById("content");
       const errorDisplay = document.getElementById("error");
       const siteInfo = document.getElementById("siteInfo");
+      const todayHistory = document.getElementById("todayHistory");
       const status = document.getElementById("status");
       const btn = document.getElementById("actionBtn");
 
@@ -229,47 +265,44 @@
 
         // Uzaksa uyar
         if (currentSite.distance > 0.5) { // 500 metre
-          throw new Error(`En yakın şantiye ${(currentSite.distance * 1000).toFixed(0)}m uzakta. Lütfen şantiyeye yaklaşın.\n\nSenin konumun:\nEnlem: ${userLocation.lat}\nBoylam: ${userLocation.lng}`);
+          throw new Error(`En yakın şantiye ${(currentSite.distance * 1000).toFixed(0)}m uzakta. Lütfen şantiyeye yaklaşın.`);
         }
 
-        // 3. Bugünkü kaydı kontrol et
+        // 3. Bugünkü kayıtları getir
         loading.textContent = "Kontrol ediliyor...";
-        const todayRecord = await checkTodayEntry(currentSite.name);
+        const todayRecords = await getTodayRecords(currentSite.name);
+        activeRecord = findActiveRecord(todayRecords);
+        hasActiveEntry = !!activeRecord;
 
-        if (todayRecord && todayRecord.exit_time) {
-          // Bugün çıkış yapmış
-          siteInfo.innerHTML = `
-            <h3>✅ ${currentSite.name}</h3>
-            <p>📍 ${currentSite.address}</p>
-            <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
-          `;
-          status.className = "status exit";
-          status.textContent = "✅ Bugün giriş-çıkış tamamlandı";
-          btn.style.display = "none";
+        // Şantiye bilgisi
+        siteInfo.innerHTML = `
+          <h3>📍 ${currentSite.name}</h3>
+          <p>${currentSite.address}</p>
+          <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
+        `;
 
-        } else if (todayRecord && todayRecord.entry_time) {
-          // Bugün giriş yapmış, çıkış yapmamış
-          hasEntry = true;
-          siteInfo.innerHTML = `
-            <h3>📍 ${currentSite.name}</h3>
-            <p>📍 ${currentSite.address}</p>
-            <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
-          `;
+        // Bugünkü geçmiş kayıtlar
+        if (todayRecords.length > 0) {
+          let historyHTML = '<strong>📅 Bugünkü Kayıtlar:</strong><br>';
+          todayRecords.forEach(record => {
+            if (record.entry_time && record.exit_time) {
+              historyHTML += `✅ ${record.entry_time} - ${record.exit_time} (${record.duration || '?'})<br>`;
+            }
+          });
+          todayHistory.innerHTML = historyHTML;
+        }
+
+        // Durum ve buton
+        if (hasActiveEntry) {
+          // Aktif giriş var, çıkış yapabilir
           status.className = "status entry";
-          status.textContent = `Giriş saati: ${todayRecord.entry_time}`;
+          status.textContent = `⏰ Giriş saati: ${activeRecord.entry_time}`;
           btn.textContent = "Çıkış Yap 🚪";
           btn.className = "login-container button btn-exit";
-
         } else {
-          // Bugün hiç giriş yapmamış
-          hasEntry = false;
-          siteInfo.innerHTML = `
-            <h3>📍 ${currentSite.name}</h3>
-            <p>📍 ${currentSite.address}</p>
-            <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
-          `;
+          // Yeni giriş yapabilir
           status.className = "status";
-          status.textContent = "Henüz giriş yapmadınız";
+          status.textContent = "Giriş yapmak için butona basın";
           btn.textContent = "Giriş Yap 🚪";
           btn.className = "login-container button btn-entry";
         }
@@ -279,9 +312,10 @@
         content.style.display = "block";
 
       } catch (err) {
-        console.error(err);
+        console.error("Init hatası:", err);
+        console.error("Hata detayları:", JSON.stringify(err, null, 2));
         loading.style.display = "none";
-        errorDisplay.textContent = err.message || "Bir hata oluştu";
+        errorDisplay.textContent = (err.message || JSON.stringify(err));
       }
     }
 
