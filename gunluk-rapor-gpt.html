@@ -120,6 +120,61 @@
       color: #666;
       font-size: 14px;
     }
+    
+    /* Mobil için kartlı görünüm */
+    .record-card {
+      background: #f8f9fa;
+      border-left: 4px solid #2c7be5;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      display: none;
+    }
+    .record-card .card-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 13px;
+    }
+    .record-card .card-label {
+      font-weight: bold;
+      color: #666;
+    }
+    .record-card .card-value {
+      text-align: right;
+    }
+    
+    /* Mobil görünüm */
+    @media (max-width: 768px) {
+      .table-wrapper {
+        display: none;
+      }
+      .record-card {
+        display: block;
+      }
+      .admin-container h1 {
+        font-size: 18px;
+      }
+      .filters select, .filters input {
+        width: 100%;
+        max-width: 100%;
+        margin: 3px 0;
+      }
+      .filters button {
+        width: 48%;
+        margin: 3px 1%;
+      }
+    }
+    
+    /* Masaüstü görünüm */
+    @media (min-width: 769px) {
+      .record-card {
+        display: none;
+      }
+      .table-wrapper {
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
@@ -148,6 +203,10 @@
 
     <div id="loading" class="loading">Yükleniyor...</div>
 
+    <!-- Mobil: Kartlı Görünüm -->
+    <div id="recordCards"></div>
+
+    <!-- Masaüstü: Tablo Görünümü -->
     <div class="table-wrapper">
       <table class="records-table" id="recordsTable" style="display:none;">
         <thead>
@@ -225,12 +284,14 @@
       const loading = document.getElementById("loading");
       const table = document.getElementById("recordsTable");
       const tbody = document.getElementById("recordsBody");
+      const recordCards = document.getElementById("recordCards");
       const summary = document.getElementById("summary");
       const errorDisplay = document.getElementById("error");
 
       try {
         loading.style.display = "block";
         table.style.display = "none";
+        recordCards.innerHTML = "";
         errorDisplay.textContent = "";
 
         // Filtre değerleri
@@ -256,17 +317,19 @@
 
         if (error) throw error;
 
-        // Tablo doldur
+        // Tablo ve kartları doldur
         tbody.innerHTML = "";
         
         if (!records || records.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Kayıt bulunamadı</td></tr>';
+          recordCards.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">Kayıt bulunamadı</p>';
         } else {
           let totalMinutes = 0;
           let activeCount = 0;
           let completeCount = 0;
 
           records.forEach(record => {
+            // TABLO SATIRI
             const tr = document.createElement('tr');
             
             let status = '';
@@ -300,6 +363,41 @@
               <td>${statusBadge}</td>
             `;
             tbody.appendChild(tr);
+
+            // MOBİL KART
+            const card = document.createElement('div');
+            card.className = 'record-card';
+            card.innerHTML = `
+              <div class="card-row">
+                <span class="card-label">👷 İşçi:</span>
+                <span class="card-value">${record.worker_name}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">📍 Şantiye:</span>
+                <span class="card-value">${record.site_name}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">📅 Tarih:</span>
+                <span class="card-value">${record.date}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">🚪 Giriş:</span>
+                <span class="card-value">${record.entry_time || '-'}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">🚪 Çıkış:</span>
+                <span class="card-value">${record.exit_time || '-'}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">⏱️ Süre:</span>
+                <span class="card-value">${record.duration || '-'}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">📊 Durum:</span>
+                <span class="card-value">${statusBadge}</span>
+              </div>
+            `;
+            recordCards.appendChild(card);
           });
 
           // Özet bilgileri
