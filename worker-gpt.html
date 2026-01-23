@@ -2,34 +2,119 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Şantiye Takip – Ana Ekran</title>
-  <link rel="stylesheet" href="style-gpt.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SERFA TEKNİK – Ana Ekran</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1a2d4f 0%, #2d3e52 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .logo {
+      max-width: 180px;
+      margin: 0 auto 20px auto;
+      display: block;
+    }
+
+    .container h1 {
+      margin: 10px 0 5px 0;
+      color: #1a2d4f;
+      font-size: 20px;
+    }
+
+    .container p {
+      color: #666;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+
+    .container button {
+      width: 100%;
+      padding: 13px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #1a2d4f 0%, #2d3e52 100%);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(26, 45, 79, 0.3);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
+      color: #fff;
+    }
+
+    .btn-warning:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 165, 0, 0.3);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+    }
+  </style>
 </head>
 <body>
 
-  <div class="login-container">
-    <h1>Hoş geldin <span id="workerName"></span> <span id="roleIcon"></span></h1>
-
+  <div class="container">
+    <img src="serfa-logo.png" alt="SERFA TEKNİK" class="logo" />
+    <h1>Hoş geldin <span id="workerName"></span> 👷</h1>
     <p>Bugün ne yapmak istiyorsun?</p>
 
     <!-- İşçi Menüsü -->
     <div id="workerMenu" style="display:none;">
-      <button onclick="location.href='giris-cikis-gpt.html'">📍 Giriş – Çıkış</button>
-      <button onclick="location.href='malzeme-bildirim-gpt.html'">📦 Malzeme Bildirimi</button>
+      <button class="btn-primary" onclick="location.href='giris-cikis-gpt.html'">🚪 Giriş – Çıkış</button>
+      <button class="btn-primary" onclick="location.href='malzeme-bildirim-gpt.html'">📦 Malzeme Bildirimi</button>
     </div>
 
     <!-- Admin Menüsü -->
     <div id="adminMenu" style="display:none;">
-      <button onclick="location.href='gunluk-rapor-gpt.html'">📊 Günlük Rapor</button>
-      <button onclick="location.href='aylik-rapor-gpt.html'">📅 Aylık Rapor</button>
-      <button onclick="location.href='malzeme-bildirim-gpt.html'">📦 Malzeme Bildirimleri</button>
-      <button onclick="location.href='yonetim-gpt.html'">⚙️ Yönetim</button>
+      <button class="btn-primary" onclick="location.href='gunluk-rapor-gpt.html'">📊 Günlük Rapor</button>
+      <button class="btn-primary" onclick="location.href='aylik-rapor-gpt.html'">📅 Aylık Rapor</button>
+      <button class="btn-warning" onclick="location.href='malzeme-bildirim-gpt.html'">📦 Malzeme Bildirimleri</button>
+      <button class="btn-warning" onclick="location.href='yonetim-gpt.html'">⚙️ Yönetim</button>
     </div>
 
-    <button onclick="logout()" style="background:#dc3545; margin-top: 20px;">Çıkış</button>
-
+    <button class="btn-danger" onclick="logout()">🚪 Çıkış</button>
   </div>
-  
+
   <script>
     const user = localStorage.getItem("loggedUser");
     const role = localStorage.getItem("userRole");
@@ -44,14 +129,12 @@
       window.location.href = "index.html";
     }
 
-    // İsim ve menüyü ayarla
     document.getElementById("workerName").textContent = user;
 
+    // Role bazlı menü göster
     if (role === 'admin') {
-      document.getElementById("roleIcon").textContent = "👔";
       document.getElementById("adminMenu").style.display = "block";
     } else {
-      document.getElementById("roleIcon").textContent = "👷";
       document.getElementById("workerMenu").style.display = "block";
     }
   </script>
