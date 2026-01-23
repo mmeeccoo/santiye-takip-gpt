@@ -2,13 +2,312 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Sayfa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Günlük Rapor - Admin Panel</title>
   <link rel="stylesheet" href="style-gpt.css">
+  <style>
+    body {
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    .admin-container {
+      background: #fff;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .filters {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    .filters select, .filters input {
+      padding: 8px;
+      margin: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .filters button {
+      padding: 8px 15px;
+      background: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .filters button:hover {
+      background: #1a68d1;
+    }
+    .summary {
+      background: #e8f4f8;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    .summary h3 {
+      margin: 0 0 10px 0;
+      color: #2c7be5;
+    }
+    .records-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .records-table th {
+      background: #2c7be5;
+      color: white;
+      padding: 10px;
+      text-align: left;
+    }
+    .records-table td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .records-table tr:hover {
+      background: #f8f9fa;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .badge.complete {
+      background: #d4edda;
+      color: #155724;
+    }
+    .badge.active {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
-  <div class="login-container">
-    <h1>Sayfa</h1>
-    <a href="worker-gpt.html">⬅ peri</a>
+
+  <div class="admin-container">
+    <h1>📊 Günlük Rapor - Admin Panel</h1>
+    <a href="worker-gpt.html">⬅ Geri</a>
+
+    <div class="filters">
+      <strong>🔍 Filtreler:</strong><br>
+      <input type="date" id="filterDate" />
+      
+      <select id="filterSite">
+        <option value="">Tüm Şantiyeler</option>
+      </select>
+      
+      <select id="filterWorker">
+        <option value="">Tüm İşçiler</option>
+      </select>
+      
+      <button onclick="loadRecords()">Filtrele</button>
+      <button onclick="resetFilters()">Sıfırla</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+
+    <div id="loading" class="loading">Yükleniyor...</div>
+
+    <table class="records-table" id="recordsTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>İşçi</th>
+          <th>Şantiye</th>
+          <th>Tarih</th>
+          <th>Giriş</th>
+          <th>Çıkış</th>
+          <th>Süre</th>
+          <th>Durum</th>
+        </tr>
+      </thead>
+      <tbody id="recordsBody"></tbody>
+    </table>
+
+    <p id="error" class="error"></p>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app-gpt.js"></script>
+  <script>
+    const role = localStorage.getItem("userRole");
+    
+    // Admin kontrolü
+    if (role !== 'admin') {
+      alert("Bu sayfaya erişim yetkiniz yok!");
+      window.location.href = "worker-gpt.html";
+    }
+
+    // Bugünün tarihi
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById("filterDate").value = today;
+
+    // Filtreleri doldur
+    async function loadFilters() {
+      try {
+        // Şantiyeleri yükle
+        const { data: sites } = await window.supabaseClient
+          .from('sites')
+          .select('name')
+          .order('name');
+        
+        const siteSelect = document.getElementById("filterSite");
+        sites.forEach(site => {
+          const option = document.createElement('option');
+          option.value = site.name;
+          option.textContent = site.name;
+          siteSelect.appendChild(option);
+        });
+
+        // İşçileri yükle
+        const { data: workers } = await window.supabaseClient
+          .from('users')
+          .select('username')
+          .eq('role', 'worker')
+          .order('username');
+        
+        const workerSelect = document.getElementById("filterWorker");
+        workers.forEach(worker => {
+          const option = document.createElement('option');
+          option.value = worker.username;
+          option.textContent = worker.username;
+          workerSelect.appendChild(option);
+        });
+
+      } catch (err) {
+        console.error("Filtre yükleme hatası:", err);
+      }
+    }
+
+    // Kayıtları yükle
+    async function loadRecords() {
+      const loading = document.getElementById("loading");
+      const table = document.getElementById("recordsTable");
+      const tbody = document.getElementById("recordsBody");
+      const summary = document.getElementById("summary");
+      const errorDisplay = document.getElementById("error");
+
+      try {
+        loading.style.display = "block";
+        table.style.display = "none";
+        errorDisplay.textContent = "";
+
+        // Filtre değerleri
+        const filterDate = document.getElementById("filterDate").value || today;
+        const filterSite = document.getElementById("filterSite").value;
+        const filterWorker = document.getElementById("filterWorker").value;
+
+        // Sorgu oluştur
+        let query = window.supabaseClient
+          .from('records')
+          .select('*')
+          .eq('date', filterDate)
+          .order('entry_time', { ascending: false });
+
+        if (filterSite) {
+          query = query.eq('site_name', filterSite);
+        }
+        if (filterWorker) {
+          query = query.eq('worker_name', filterWorker);
+        }
+
+        const { data: records, error } = await query;
+
+        if (error) throw error;
+
+        // Tablo doldur
+        tbody.innerHTML = "";
+        
+        if (!records || records.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Kayıt bulunamadı</td></tr>';
+        } else {
+          let totalMinutes = 0;
+          let activeCount = 0;
+          let completeCount = 0;
+
+          records.forEach(record => {
+            const tr = document.createElement('tr');
+            
+            let status = '';
+            let statusBadge = '';
+            
+            if (record.entry_time && record.exit_time) {
+              status = 'Tamamlandı';
+              statusBadge = '<span class="badge complete">✅ Tamamlandı</span>';
+              completeCount++;
+              
+              // Toplam süreyi hesapla
+              if (record.duration) {
+                const match = record.duration.match(/(\d+) saat (\d+) dakika/);
+                if (match) {
+                  totalMinutes += parseInt(match[1]) * 60 + parseInt(match[2]);
+                }
+              }
+            } else {
+              status = 'Aktif';
+              statusBadge = '<span class="badge active">⏳ Aktif</span>';
+              activeCount++;
+            }
+
+            tr.innerHTML = `
+              <td>${record.worker_name}</td>
+              <td>${record.site_name}</td>
+              <td>${record.date}</td>
+              <td>${record.entry_time || '-'}</td>
+              <td>${record.exit_time || '-'}</td>
+              <td>${record.duration || '-'}</td>
+              <td>${statusBadge}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          // Özet bilgileri
+          const totalHours = Math.floor(totalMinutes / 60);
+          const totalMins = totalMinutes % 60;
+          
+          summary.innerHTML = `
+            <h3>📈 Özet Bilgiler</h3>
+            <p><strong>Toplam Kayıt:</strong> ${records.length}</p>
+            <p><strong>Aktif Giriş:</strong> ${activeCount}</p>
+            <p><strong>Tamamlanan:</strong> ${completeCount}</p>
+            <p><strong>Toplam Çalışma Süresi:</strong> ${totalHours} saat ${totalMins} dakika</p>
+          `;
+        }
+
+        loading.style.display = "none";
+        table.style.display = "table";
+
+      } catch (err) {
+        console.error("Kayıt yükleme hatası:", err);
+        loading.style.display = "none";
+        errorDisplay.textContent = "Hata: " + (err.message || "Bilinmeyen hata");
+      }
+    }
+
+    // Filtreleri sıfırla
+    function resetFilters() {
+      document.getElementById("filterDate").value = today;
+      document.getElementById("filterSite").value = "";
+      document.getElementById("filterWorker").value = "";
+      loadRecords();
+    }
+
+    // Sayfa yüklendiğinde
+    async function init() {
+      await loadFilters();
+      await loadRecords();
+    }
+
+    init();
+  </script>
+
 </body>
 </html>
