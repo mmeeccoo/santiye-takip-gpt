@@ -11,9 +11,10 @@
     }
     body {
       background: #f2f2f2;
-      padding: 10px;
+      padding: 20px 10px;
       margin: 0;
       font-size: 14px;
+      min-height: 100vh;
     }
     .admin-container {
       background: #fff;
@@ -32,19 +33,26 @@
       gap: 10px;
       margin: 15px 0;
       border-bottom: 2px solid #ddd;
+      flex-wrap: wrap;
     }
     .tab {
-      padding: 10px 20px;
+      padding: 12px 20px;
       cursor: pointer;
       border: none;
-      background: none;
+      background: #f8f9fa;
       font-size: 15px;
       border-bottom: 3px solid transparent;
+      border-radius: 5px 5px 0 0;
+      white-space: nowrap;
     }
     .tab.active {
       border-bottom-color: #2c7be5;
+      background: #fff;
       color: #2c7be5;
       font-weight: bold;
+    }
+    .tab:hover {
+      background: #e9ecef;
     }
     .tab-content {
       display: none;
