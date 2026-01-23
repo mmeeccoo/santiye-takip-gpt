@@ -55,6 +55,12 @@
     .filters button:hover {
       background: #1a68d1;
     }
+    .btn-excel {
+      background: #28a745;
+    }
+    .btn-excel:hover {
+      background: #218838;
+    }
     .summary {
       background: #e8f4f8;
       padding: 10px;
@@ -164,6 +170,10 @@
         width: 48%;
         margin: 3px 1%;
       }
+      .btn-excel {
+        width: 100%;
+        margin-top: 5px;
+      }
     }
     
     /* Masaüstü görünüm */
@@ -197,6 +207,7 @@
       
       <button onclick="loadRecords()">Filtrele</button>
       <button onclick="resetFilters()">Sıfırla</button>
+      <button class="btn-excel" onclick="exportToExcel()">📥 Excel İndir</button>
     </div>
 
     <div class="summary" id="summary"></div>
@@ -227,6 +238,8 @@
     <p id="error" class="error"></p>
   </div>
 
+  <!-- Excel Export için SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app-gpt.js"></script>
   <script>
@@ -237,6 +250,8 @@
       alert("Bu sayfaya erişim yetkiniz yok!");
       window.location.href = "worker-gpt.html";
     }
+
+    let currentRecords = []; // Excel için veri
 
     // Bugünün tarihi
     const today = new Date().toISOString().split('T')[0];
@@ -316,6 +331,9 @@
         const { data: records, error } = await query;
 
         if (error) throw error;
+
+        // Veriyi sakla (Excel için)
+        currentRecords = records || [];
 
         // Tablo ve kartları doldur
         tbody.innerHTML = "";
@@ -429,6 +447,36 @@
       document.getElementById("filterSite").value = "";
       document.getElementById("filterWorker").value = "";
       loadRecords();
+    }
+
+    // Excel'e aktar
+    function exportToExcel() {
+      if (currentRecords.length === 0) {
+        alert("Önce kayıtları yükleyin!");
+        return;
+      }
+
+      const filterDate = document.getElementById("filterDate").value;
+      const dateStr = new Date(filterDate).toLocaleDateString('tr-TR');
+
+      // Excel verisi hazırla
+      const excelData = currentRecords.map(record => ({
+        'İşçi': record.worker_name,
+        'Şantiye': record.site_name,
+        'Tarih': record.date,
+        'Giriş Saati': record.entry_time || '-',
+        'Çıkış Saati': record.exit_time || '-',
+        'Çalışma Süresi': record.duration || '-',
+        'Durum': (record.entry_time && record.exit_time) ? 'Tamamlandı' : 'Aktif'
+      }));
+
+      // Excel dosyası oluştur
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Günlük Rapor");
+
+      // İndir
+      XLSX.writeFile(wb, `Gunluk_Rapor_${filterDate}.xlsx`);
     }
 
     // Sayfa yüklendiğinde
