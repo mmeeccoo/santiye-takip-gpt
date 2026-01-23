@@ -2,13 +2,292 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Sayfa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giriş - Çıkış</title>
   <link rel="stylesheet" href="style-gpt.css">
+  <style>
+    .site-info {
+      background: #e8f4f8;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    .site-info h3 {
+      margin: 0 0 10px 0;
+      color: #2c7be5;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .status.entry {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.exit {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .btn-entry {
+      background: #28a745;
+    }
+    .btn-entry:hover {
+      background: #218838;
+    }
+    .btn-exit {
+      background: #ffc107;
+      color: #000;
+    }
+    .btn-exit:hover {
+      background: #e0a800;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
+
   <div class="login-container">
-    <h1>Sayfa</h1>
+    <h1>Giriş - Çıkış 📍</h1>
     <a href="worker-gpt.html">⬅ Geri</a>
+
+    <div id="loading" class="loading">
+      Konum alınıyor...
+    </div>
+
+    <div id="content" style="display:none;">
+      <div class="site-info" id="siteInfo"></div>
+      <div class="status" id="status"></div>
+      <button id="actionBtn" onclick="handleAction()"></button>
+    </div>
+
+    <p id="error" class="error"></p>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app-gpt.js"></script>
+  <script>
+    const user = localStorage.getItem("loggedUser");
+    if (!user) {
+      window.location.href = "index.html";
+    }
+
+    let currentSite = null;
+    let hasEntry = false;
+    let userLocation = null;
+
+    // GPS ile konum al
+    async function getLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject("GPS desteklenmiyor");
+        }
+        navigator.geolocation.getCurrentPosition(
+          position => resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }),
+          error => reject("Konum izni verilmedi")
+        );
+      });
+    }
+
+    // İki nokta arası mesafe (km)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Dünya yarıçapı (km)
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    // En yakın şantiyeyi bul
+    async function findNearestSite(userLat, userLng) {
+      const { data: sites, error } = await window.supabaseClient
+        .from('sites')
+        .select('*');
+
+      if (error) throw error;
+      if (!sites || sites.length === 0) {
+        throw new Error("Hiç şantiye bulunamadı");
+      }
+
+      let nearest = null;
+      let minDistance = Infinity;
+
+      sites.forEach(site => {
+        const distance = calculateDistance(
+          userLat, userLng,
+          parseFloat(site.latitude),
+          parseFloat(site.longitude)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = { ...site, distance };
+        }
+      });
+
+      return nearest;
+    }
+
+    // Bugünkü giriş kaydını kontrol et
+    async function checkTodayEntry(siteName) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await window.supabaseClient
+        .from('records')
+        .select('*')
+        .eq('worker_name', user)
+        .eq('site_name', siteName)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    }
+
+    // Giriş/Çıkış işlemi
+    async function handleAction() {
+      const errorDisplay = document.getElementById("error");
+      const btn = document.getElementById("actionBtn");
+      
+      try {
+        btn.disabled = true;
+        btn.textContent = "Kaydediliyor...";
+        errorDisplay.textContent = "";
+
+        const now = new Date();
+        const time = now.toTimeString().split(' ')[0]; // HH:MM:SS
+        const date = now.toISOString().split('T')[0];
+
+        if (!hasEntry) {
+          // GİRİŞ KAYDI
+          const { error } = await window.supabaseClient
+            .from('records')
+            .insert({
+              worker_name: user,
+              site_name: currentSite.name,
+              date: date,
+              entry_time: time,
+              latitude: userLocation.lat.toString(),
+              longitude: userLocation.lng.toString(),
+              site_id: currentSite.id
+            });
+
+          if (error) throw error;
+          alert("✅ Giriş kaydedildi!");
+          
+        } else {
+          // ÇIKIŞ KAYDI
+          const todayRecord = await checkTodayEntry(currentSite.name);
+          
+          const { error } = await window.supabaseClient
+            .from('records')
+            .update({ exit_time: time })
+            .eq('id', todayRecord.id);
+
+          if (error) throw error;
+          alert("✅ Çıkış kaydedildi!");
+        }
+
+        // Sayfayı yenile
+        window.location.reload();
+
+      } catch (err) {
+        console.error(err);
+        errorDisplay.textContent = "Hata: " + err.message;
+        btn.disabled = false;
+        btn.textContent = hasEntry ? "Çıkış Yap 🚪" : "Giriş Yap 🚪";
+      }
+    }
+
+    // Sayfa yüklenince
+    async function init() {
+      const loading = document.getElementById("loading");
+      const content = document.getElementById("content");
+      const errorDisplay = document.getElementById("error");
+      const siteInfo = document.getElementById("siteInfo");
+      const status = document.getElementById("status");
+      const btn = document.getElementById("actionBtn");
+
+      try {
+        // 1. Konum al
+        loading.textContent = "Konum alınıyor...";
+        userLocation = await getLocation();
+
+        // 2. En yakın şantiyeyi bul
+        loading.textContent = "Şantiye tespit ediliyor...";
+        currentSite = await findNearestSite(userLocation.lat, userLocation.lng);
+
+        // Uzaksa uyar
+        if (currentSite.distance > 0.5) { // 500 metre
+          throw new Error(`En yakın şantiye ${(currentSite.distance * 1000).toFixed(0)}m uzakta. Lütfen şantiyeye yaklaşın.`);
+        }
+
+        // 3. Bugünkü kaydı kontrol et
+        loading.textContent = "Kontrol ediliyor...";
+        const todayRecord = await checkTodayEntry(currentSite.name);
+
+        if (todayRecord && todayRecord.exit_time) {
+          // Bugün çıkış yapmış
+          siteInfo.innerHTML = `
+            <h3>✅ ${currentSite.name}</h3>
+            <p>📍 ${currentSite.address}</p>
+            <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
+          `;
+          status.className = "status exit";
+          status.textContent = "✅ Bugün giriş-çıkış tamamlandı";
+          btn.style.display = "none";
+
+        } else if (todayRecord && todayRecord.entry_time) {
+          // Bugün giriş yapmış, çıkış yapmamış
+          hasEntry = true;
+          siteInfo.innerHTML = `
+            <h3>📍 ${currentSite.name}</h3>
+            <p>📍 ${currentSite.address}</p>
+            <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
+          `;
+          status.className = "status entry";
+          status.textContent = `Giriş saati: ${todayRecord.entry_time}`;
+          btn.textContent = "Çıkış Yap 🚪";
+          btn.className = "login-container button btn-exit";
+
+        } else {
+          // Bugün hiç giriş yapmamış
+          hasEntry = false;
+          siteInfo.innerHTML = `
+            <h3>📍 ${currentSite.name}</h3>
+            <p>📍 ${currentSite.address}</p>
+            <p>📏 Mesafe: ${(currentSite.distance * 1000).toFixed(0)}m</p>
+          `;
+          status.className = "status";
+          status.textContent = "Henüz giriş yapmadınız";
+          btn.textContent = "Giriş Yap 🚪";
+          btn.className = "login-container button btn-entry";
+        }
+
+        // İçeriği göster
+        loading.style.display = "none";
+        content.style.display = "block";
+
+      } catch (err) {
+        console.error(err);
+        loading.style.display = "none";
+        errorDisplay.textContent = err.message || "Bir hata oluştu";
+      }
+    }
+
+    // Sayfa yüklendiğinde başlat
+    init();
+  </script>
+
 </body>
 </html>
