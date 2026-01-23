@@ -229,7 +229,7 @@
 
         // Uzaksa uyar
         if (currentSite.distance > 0.5) { // 500 metre
-          throw new Error(`En yakın şantiye ${(currentSite.distance * 1000).toFixed(0)}m uzakta. Lütfen şantiyeye yaklaşın.`);
+          throw new Error(`En yakın şantiye ${(currentSite.distance * 1000).toFixed(0)}m uzakta. Lütfen şantiyeye yaklaşın.\n\nSenin konumun:\nEnlem: ${userLocation.lat}\nBoylam: ${userLocation.lng}`);
         }
 
         // 3. Bugünkü kaydı kontrol et
